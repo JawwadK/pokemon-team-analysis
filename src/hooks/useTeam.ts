@@ -3,38 +3,44 @@ import { useState, useCallback } from 'react';
 import { Pokemon } from '@/types/pokemon';
 
 export const useTeam = (maxTeamSize: number = 6) => {
-  const [team, setTeam] = useState<Pokemon[]>([]);
+  // Initialize with array of null values for empty slots
+  const [team, setTeam] = useState<(Pokemon | null)[]>(Array(maxTeamSize).fill(null));
 
-  const addToTeam = useCallback((pokemon: Pokemon) => {
+  const addPokemonToSlot = useCallback((pokemon: Pokemon, slot: number) => {
+    if (slot < 0 || slot >= maxTeamSize) return;
+    
     setTeam(currentTeam => {
-      if (currentTeam.length >= maxTeamSize) {
-        alert('Team is full!');
-        return currentTeam;
-      }
-      
-      if (currentTeam.some(p => p.id === pokemon.id)) {
-        alert('This Pokémon is already in your team!');
-        return currentTeam;
-      }
-      
-      return [...currentTeam, pokemon];
+      const newTeam = [...currentTeam];
+      newTeam[slot] = pokemon;
+      return newTeam;
     });
   }, [maxTeamSize]);
 
-  const removeFromTeam = useCallback((pokemonId: number) => {
-    setTeam(currentTeam => currentTeam.filter(p => p.id !== pokemonId));
-  }, []);
+  const removePokemonFromSlot = useCallback((slot: number) => {
+    if (slot < 0 || slot >= maxTeamSize) return;
+    
+    setTeam(currentTeam => {
+      const newTeam = [...currentTeam];
+      newTeam[slot] = null;
+      return newTeam;
+    });
+  }, [maxTeamSize]);
 
   const clearTeam = useCallback(() => {
-    setTeam([]);
-  }, []);
+    setTeam(Array(maxTeamSize).fill(null));
+  }, [maxTeamSize]);
+
+  // Get non-null pokemon for components that don't handle null values
+  const getActiveTeam = useCallback(() => {
+    return team.filter((pokemon): pokemon is Pokemon => pokemon !== null);
+  }, [team]);
 
   return {
     team,
-    addToTeam,
-    removeFromTeam,
+    addPokemonToSlot,
+    removePokemonFromSlot,
     clearTeam,
-    isFull: team.length >= maxTeamSize,
-    isEmpty: team.length === 0
+    getActiveTeam,
+    isEmpty: team.every(slot => slot === null)
   };
 };

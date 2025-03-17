@@ -1,158 +1,157 @@
 // src/components/TypeAnalysis.tsx
 import { Pokemon, PokemonType } from "@/types/pokemon";
-import { TYPE_CHART, TypeEffectiveness } from "@/data/typeChart";
+import { TYPE_CHART } from "@/data/typeChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 interface TypeAnalysisProps {
   team: Pokemon[];
 }
 
 export const TypeAnalysis = ({ team }: TypeAnalysisProps) => {
-  const calculateTeamDefenses = (): TypeEffectiveness => {
-    const defaultEffectiveness = Object.keys(TYPE_CHART).reduce(
-      (acc, type) => ({
-        ...acc,
-        [type]: 1,
-      }),
-      {} as TypeEffectiveness
+  // Calculate effectiveness for a single Pokémon
+  const calculatePokemonDefense = (
+    pokemon: Pokemon
+  ): Record<PokemonType, number> => {
+    const effectiveness: Record<PokemonType, number> = Object.keys(
+      TYPE_CHART
+    ).reduce(
+      (acc, type) => ({ ...acc, [type]: 1 }),
+      {} as Record<PokemonType, number>
     );
 
-    if (team.length === 0) return defaultEffectiveness;
-
-    // Calculate effectiveness multiplier for each attacking type against each team member
-    return team.reduce((teamEffectiveness, pokemon) => {
-      const pokemonEffectiveness = { ...defaultEffectiveness };
-
-      pokemon.types.forEach((typeInfo) => {
-        const defenderType = typeInfo.type.name as PokemonType;
-
-        Object.entries(TYPE_CHART).forEach(([attackType, effectiveness]) => {
-          const multiplier = effectiveness[defenderType] || 1;
-          pokemonEffectiveness[attackType as PokemonType] *= multiplier;
-        });
+    pokemon.types.forEach((typeInfo) => {
+      const defenderType = typeInfo.type.name as PokemonType;
+      Object.entries(TYPE_CHART).forEach(([attackType, relations]) => {
+        const multiplier = relations[defenderType] || 1;
+        effectiveness[attackType] *= multiplier;
       });
+    });
 
-      // Combine with team effectiveness
-      return Object.entries(pokemonEffectiveness).reduce(
-        (acc, [type, value]) => ({
-          ...acc,
-          [type]: Math.min(value, teamEffectiveness[type as PokemonType] || 1),
-        }),
-        {} as TypeEffectiveness
-      );
-    }, defaultEffectiveness);
+    return effectiveness;
   };
 
-  const defenses = calculateTeamDefenses();
+  // Calculate team totals
+  const calculateTeamTotals = (
+    allEffectiveness: Record<PokemonType, number>[]
+  ) => {
+    const types = Object.keys(TYPE_CHART) as PokemonType[];
+    return types.reduce((acc, type) => {
+      const weakCount = allEffectiveness.filter((e) => e[type] > 1).length;
+      const resistCount = allEffectiveness.filter((e) => e[type] < 1).length;
+      return {
+        ...acc,
+        [type]: { weak: weakCount, resist: resistCount },
+      };
+    }, {} as Record<PokemonType, { weak: number; resist: number }>);
+  };
+
+  const formatEffectiveness = (value: number): string => {
+    if (value === 0) return "immune";
+    if (value === 0.25) return "¼";
+    if (value === 0.5) return "½";
+    if (value === 1) return "";
+    if (value === 2) return "2x";
+    if (value === 4) return "4x";
+    return value.toString();
+  };
 
   const getEffectivenessClass = (value: number): string => {
-    if (value >= 2) return "text-red-500 font-bold";
-    if (value === 0) return "text-green-600 font-bold";
-    if (value < 1) return "text-green-500";
-    return "text-gray-600";
+    if (value === 0) return "bg-gray-500 text-white px-2 rounded text-sm";
+    if (value > 1) return "text-red-500 font-bold";
+    if (value < 1) return "text-green-500 font-bold";
+    return "";
   };
 
-  const getEffectivenessLabel = (value: number): string => {
-    if (value >= 2) return "Weak";
-    if (value === 0) return "Immune";
-    if (value < 1) return "Resistant";
-    return "Neutral";
+  // Get the best available sprite for display
+  const getBestSprite = (pokemon: Pokemon) => {
+    // Try to get official artwork first (highest quality)
+    // @ts-ignore
+    const officialArtwork =
+      pokemon.sprites?.other?.["official-artwork"]?.front_default;
+    // @ts-ignore
+    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
+    // If none of the high-quality options are available, fall back to regular sprite
+    return officialArtwork || homeArtwork || pokemon.sprites.front_default;
   };
+
+  const pokemonEffectiveness = team.map((pokemon) =>
+    calculatePokemonDefense(pokemon)
+  );
+  const teamTotals = calculateTeamTotals(pokemonEffectiveness);
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Team Type Analysis</CardTitle>
+        <CardTitle>Defensive Coverage</CardTitle>
       </CardHeader>
       <CardContent>
-        {team.length === 0 ? (
-          <p className="text-gray-500">
-            Add Pokémon to your team to see type analysis
-          </p>
-        ) : (
-          <div className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Effectiveness</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(defenses)
-                  .sort(([, a], [, b]) => b - a) // Sort by effectiveness
-                  .map(([type, effectiveness]) => (
-                    <TableRow key={type}>
-                      <TableCell className="capitalize font-medium">
-                        {type}
-                      </TableCell>
-                      <TableCell
-                        className={getEffectivenessClass(effectiveness)}
+        <div className="overflow-x-auto">
+          <table className="w-full text-center">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left">Move ↓</th>
+                {team.map((pokemon, idx) => {
+                  const spriteUrl = getBestSprite(pokemon);
+
+                  return (
+                    <th key={idx} className="px-2 py-1">
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 flex items-center justify-center">
+                          <img
+                            src={spriteUrl}
+                            alt={pokemon.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="text-xs capitalize mt-1">
+                          {pokemon.name}
+                        </div>
+                      </div>
+                    </th>
+                  );
+                })}
+                <th className="px-2 py-1">Total Weak</th>
+                <th className="px-2 py-1">Total Resist</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(Object.keys(TYPE_CHART) as PokemonType[]).map((type) => (
+                <tr key={type} className="border-t">
+                  <td className="px-2 py-1 text-left capitalize font-medium bg-slate-100">
+                    {type}
+                  </td>
+                  {team.map((_, idx) => (
+                    <td key={idx} className="px-2 py-1">
+                      <span
+                        className={getEffectivenessClass(
+                          pokemonEffectiveness[idx][type]
+                        )}
                       >
-                        {effectiveness}x
-                      </TableCell>
-                      <TableCell
-                        className={getEffectivenessClass(effectiveness)}
-                      >
-                        {getEffectivenessLabel(effectiveness)}
-                      </TableCell>
-                    </TableRow>
+                        {formatEffectiveness(pokemonEffectiveness[idx][type])}
+                      </span>
+                    </td>
                   ))}
-              </TableBody>
-            </Table>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <div className="p-2 rounded bg-red-50 border border-red-200">
-                <h4 className="font-semibold text-red-700">Weaknesses</h4>
-                <p className="text-sm text-red-600">
-                  {Object.entries(defenses)
-                    .filter(([, value]) => value >= 2)
-                    .map(([type]) => type)
-                    .join(", ") || "None"}
-                </p>
-              </div>
-
-              <div className="p-2 rounded bg-green-50 border border-green-200">
-                <h4 className="font-semibold text-green-700">Resistances</h4>
-                <p className="text-sm text-green-600">
-                  {Object.entries(defenses)
-                    .filter(([, value]) => value < 1 && value > 0)
-                    .map(([type]) => type)
-                    .join(", ") || "None"}
-                </p>
-              </div>
-
-              <div className="p-2 rounded bg-green-50 border border-green-200">
-                <h4 className="font-semibold text-green-700">Immunities</h4>
-                <p className="text-sm text-green-600">
-                  {Object.entries(defenses)
-                    .filter(([, value]) => value === 0)
-                    .map(([type]) => type)
-                    .join(", ") || "None"}
-                </p>
-              </div>
-
-              <div className="p-2 rounded bg-gray-50 border border-gray-200">
-                <h4 className="font-semibold text-gray-700">Coverage Needed</h4>
-                <p className="text-sm text-gray-600">
-                  {Object.entries(defenses)
-                    .filter(([, value]) => value >= 2)
-                    .map(([type]) => type)
-                    .join(", ") || "Good coverage!"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+                  <td
+                    className={`px-2 py-1 ${
+                      teamTotals[type].weak > 0 ? "text-red-500 font-bold" : ""
+                    }`}
+                  >
+                    {teamTotals[type].weak || ""}
+                  </td>
+                  <td
+                    className={`px-2 py-1 ${
+                      teamTotals[type].resist > 0
+                        ? "text-green-500 font-bold"
+                        : ""
+                    }`}
+                  >
+                    {teamTotals[type].resist || ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );
