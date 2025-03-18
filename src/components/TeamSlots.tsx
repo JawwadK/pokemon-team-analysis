@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Pokemon } from "@/types/pokemon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle, X, Sparkles } from "lucide-react";
 import { PokemonSelectDialog } from "./PokemonSelectDialog";
+import { TypeBadge } from "./TypeBadge";
+import { cn } from "@/lib/utils";
 
 interface TeamSlotsProps {
   team: (Pokemon | null)[];
@@ -21,6 +23,7 @@ export const TeamSlots = ({
 }: TeamSlotsProps) => {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [animatingSlot, setAnimatingSlot] = useState<number | null>(null);
 
   const handleSlotClick = (index: number) => {
     setSelectedSlot(index);
@@ -29,6 +32,13 @@ export const TeamSlots = ({
 
   const handleSelectPokemon = (pokemon: Pokemon) => {
     if (selectedSlot !== null) {
+      setAnimatingSlot(selectedSlot);
+
+      // Reset animation state after animation completes
+      setTimeout(() => {
+        setAnimatingSlot(null);
+      }, 1000);
+
       onAddPokemon(pokemon, selectedSlot);
       setDialogOpen(false);
     }
@@ -41,27 +51,50 @@ export const TeamSlots = ({
     }
   };
 
+  // Get best sprite for display
+  const getBestSprite = (pokemon: Pokemon) => {
+    // @ts-ignore - These properties exist on the API response but might not be in your type definition
+    const officialArtwork =
+      pokemon.sprites?.other?.["official-artwork"]?.front_default;
+    // @ts-ignore
+    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
+    return officialArtwork || homeArtwork || pokemon.sprites.front_default;
+  };
+
   return (
     <>
-      <Card>
+      <Card className="animate-pop-in overflow-hidden shadow-md dark:bg-gray-800 dark-mode-transition">
         <CardContent className="p-6">
-          <h2 className="text-xl font-bold mb-4">Your Team</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <h2 className="text-xl font-bold mb-4 flex items-center dark:text-white">
+            Your Team
+            {team.some((slot) => slot !== null) && (
+              <Sparkles className="ml-2 h-5 w-5 text-yellow-400 animate-pulse" />
+            )}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 stagger-children">
             {Array.from({ length: 6 }).map((_, index) => {
               const pokemon = team[index];
+              const isAnimating = animatingSlot === index;
+
               return (
                 <div
                   key={index}
-                  className={`border rounded-lg p-2 flex flex-col items-center justify-center h-40 relative ${
-                    pokemon ? "bg-slate-50" : "border-dashed"
-                  }`}
+                  className={cn(
+                    "border rounded-lg p-2 flex flex-col items-center justify-center h-40 relative transition-all",
+                    pokemon
+                      ? "bg-slate-50 dark:bg-gray-700"
+                      : "border-dashed dark:border-gray-600",
+                    isAnimating ? "animate-pop-in" : "",
+                    pokemon ? "shadow-md" : "",
+                    "dark-mode-transition"
+                  )}
                 >
                   {pokemon ? (
                     <>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500"
+                        className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500 z-10"
                         onClick={(e) => {
                           e.stopPropagation();
                           onRemovePokemon(index);
@@ -69,32 +102,38 @@ export const TeamSlots = ({
                       >
                         <X size={16} />
                       </Button>
-                      <img
-                        src={pokemon.sprites.front_default}
-                        alt={pokemon.name}
-                        className="w-24 h-24"
-                      />
-                      <p className="text-sm font-medium capitalize">
+                      <div
+                        className={cn(
+                          "w-24 h-24 transition-all duration-300",
+                          isAnimating ? "animate-jello" : "hover:animate-float"
+                        )}
+                      >
+                        <img
+                          src={getBestSprite(pokemon)}
+                          alt={pokemon.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <p className="text-sm font-medium capitalize dark:text-white">
                         {pokemon.name}
                       </p>
                       <div className="flex gap-1 mt-1">
                         {pokemon.types.map((type) => (
-                          <span
+                          <TypeBadge
                             key={type.type.name}
-                            className="px-2 py-0.5 rounded-full text-xs bg-slate-200"
-                          >
-                            {type.type.name}
-                          </span>
+                            type={type.type.name}
+                            size="sm"
+                          />
                         ))}
                       </div>
                     </>
                   ) : (
                     <Button
                       variant="ghost"
-                      className="flex flex-col items-center text-gray-400 hover:text-gray-600 h-full w-full"
+                      className="flex flex-col items-center text-gray-400 hover:text-gray-600 h-full w-full dark:hover:text-gray-300 dark:text-gray-500"
                       onClick={() => handleSlotClick(index)}
                     >
-                      <PlusCircle size={32} />
+                      <PlusCircle size={32} className="animate-pulse" />
                       <span className="mt-2 text-sm">Add Pokémon</span>
                     </Button>
                   )}

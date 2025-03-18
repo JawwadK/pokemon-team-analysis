@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pokemon } from "@/types/pokemon";
 import { Pokeball } from "@/components/Pokeball";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddToTeamButtonProps {
   pokemon: Pokemon;
@@ -19,12 +20,15 @@ export const AddToTeamButton = ({
   variant = "primary",
 }: AddToTeamButtonProps) => {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
 
   const buttonVariants = {
-    primary: "bg-green-600 hover:bg-green-700 text-white",
+    primary:
+      "bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800",
     outline:
-      "border border-green-500 bg-white hover:bg-green-50 text-green-600",
-    ghost: "bg-transparent hover:bg-green-50 text-green-600",
+      "border border-green-500 bg-white hover:bg-green-50 text-green-600 dark:bg-gray-800 dark:text-green-400 dark:border-green-400 dark:hover:bg-green-900/30",
+    ghost:
+      "bg-transparent hover:bg-green-50 text-green-600 dark:text-green-400 dark:hover:bg-green-900/30",
   };
 
   const handleClick = () => {
@@ -41,7 +45,14 @@ export const AddToTeamButton = ({
     <Button
       onClick={handleClick}
       disabled={isAnimating}
-      className={`relative overflow-hidden ${buttonVariants[variant]} ${className}`}
+      className={cn(
+        "relative overflow-hidden transition-all duration-300",
+        buttonVariants[variant],
+        isHovering && !isAnimating ? "scale-105" : "",
+        className
+      )}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
       {isAnimating ? (
         <div className="flex items-center">
@@ -54,7 +65,16 @@ export const AddToTeamButton = ({
         </div>
       ) : (
         <div className="flex items-center">
-          Add to Team <ChevronRight className="ml-1 h-4 w-4" />
+          {isHovering && (
+            <Sparkles className="mr-1 h-3 w-3 text-yellow-300 animate-pulse" />
+          )}
+          Add to Team
+          <ChevronRight
+            className={cn(
+              "ml-1 h-4 w-4 transition-transform duration-300",
+              isHovering ? "translate-x-1" : ""
+            )}
+          />
         </div>
       )}
     </Button>

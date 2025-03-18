@@ -1,6 +1,7 @@
 // src/components/PokemonGrid.tsx
 import { Pokemon } from "@/types/pokemon";
 import { PokemonCard } from "./PokemonCard";
+import { cn } from "@/lib/utils";
 
 interface PokemonGridProps {
   pokemon: Pokemon[];
@@ -9,9 +10,14 @@ interface PokemonGridProps {
 
 export const PokemonGrid = ({ pokemon, onPokemonSelect }: PokemonGridProps) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {pokemon.map((poke) => (
-        <PokemonCard key={poke.id} pokemon={poke} onClick={onPokemonSelect} />
+    <div className="stagger-children grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {pokemon.map((poke, index) => (
+        <PokemonCard
+          key={poke.id}
+          pokemon={poke}
+          onClick={onPokemonSelect}
+          animationDelay={index * 50} // Stagger the animation of each card
+        />
       ))}
     </div>
   );
