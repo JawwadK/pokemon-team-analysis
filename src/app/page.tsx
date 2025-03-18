@@ -13,6 +13,7 @@ import { APP_THEMES, ThemeName } from "@/utils/PokemonTheme";
 import { usePokemonData } from "@/hooks/usePokemonData";
 import { useTeam } from "@/hooks/useTeam";
 import { Card, CardContent } from "@/components/ui/card";
+
 import { ExternalLink, Loader2, Sparkles } from "lucide-react";
 import {
   Tooltip,
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Toaster, toast } from "sonner";
 import { cn } from "@/lib/utils";
+import SidePanels from "@/components/SidePanels";
+import TextureOverlay from "@/components/TextureOverlay";
 import Confetti from "@/components/Confetti";
 import "@/animations.css";
 
@@ -375,6 +378,8 @@ export default function Home() {
         <Confetti active={showConfetti} duration={5000} />
 
         <Toaster richColors position="top-center" />
+        <TextureOverlay currentTheme={theme} />
+        <SidePanels currentTheme={theme} />
       </main>
     </TooltipProvider>
   );
