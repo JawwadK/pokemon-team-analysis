@@ -1,7 +1,10 @@
 // src/components/TypeAnalysis.tsx
 import { Pokemon, PokemonType } from "@/types/pokemon";
 import { TYPE_CHART } from "@/data/typeChart";
+import { TYPE_COLORS } from "@/utils/PokemonTheme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { TypeBadge } from "./TypeBadge";
 
 interface TypeAnalysisProps {
   team: Pokemon[];
@@ -57,8 +60,8 @@ export const TypeAnalysis = ({ team }: TypeAnalysisProps) => {
 
   const getEffectivenessClass = (value: number): string => {
     if (value === 0) return "bg-gray-500 text-white px-2 rounded text-sm";
-    if (value > 1) return "text-red-500 font-bold";
-    if (value < 1) return "text-green-500 font-bold";
+    if (value > 1) return "text-red-500 dark:text-red-400 font-bold";
+    if (value < 1) return "text-green-500 dark:text-green-400 font-bold";
     return "";
   };
 
@@ -80,16 +83,18 @@ export const TypeAnalysis = ({ team }: TypeAnalysisProps) => {
   const teamTotals = calculateTeamTotals(pokemonEffectiveness);
 
   return (
-    <Card className="w-full">
+    <Card className="w-full dark:bg-gray-800 dark:border-gray-700 animate-pop-in">
       <CardHeader>
-        <CardTitle>Defensive Coverage</CardTitle>
+        <CardTitle className="dark:text-white">Defensive Coverage</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-center">
             <thead>
               <tr>
-                <th className="px-2 py-1 text-left">Move ↓</th>
+                <th className="px-2 py-1 text-left dark:text-gray-300">
+                  Move ↓
+                </th>
                 {team.map((pokemon, idx) => {
                   const spriteUrl = getBestSprite(pokemon);
 
@@ -103,52 +108,67 @@ export const TypeAnalysis = ({ team }: TypeAnalysisProps) => {
                             className="w-full h-full object-contain"
                           />
                         </div>
-                        <div className="text-xs capitalize mt-1">
+                        <div className="text-xs capitalize mt-1 dark:text-white">
                           {pokemon.name}
                         </div>
                       </div>
                     </th>
                   );
                 })}
-                <th className="px-2 py-1">Total Weak</th>
-                <th className="px-2 py-1">Total Resist</th>
+                <th className="px-2 py-1 dark:text-gray-300">Total Weak</th>
+                <th className="px-2 py-1 dark:text-gray-300">Total Resist</th>
               </tr>
             </thead>
             <tbody>
-              {(Object.keys(TYPE_CHART) as PokemonType[]).map((type) => (
-                <tr key={type} className="border-t">
-                  <td className="px-2 py-1 text-left capitalize font-medium bg-slate-100">
-                    {type}
-                  </td>
-                  {team.map((_, idx) => (
-                    <td key={idx} className="px-2 py-1">
-                      <span
-                        className={getEffectivenessClass(
-                          pokemonEffectiveness[idx][type]
-                        )}
-                      >
-                        {formatEffectiveness(pokemonEffectiveness[idx][type])}
-                      </span>
+              {(Object.keys(TYPE_CHART) as PokemonType[]).map((type) => {
+                const typeColors = TYPE_COLORS[type];
+
+                return (
+                  <tr key={type} className="border-t dark:border-gray-700">
+                    <td
+                      className={cn(
+                        "px-2 py-1 text-left font-medium capitalize",
+                        "transition-colors duration-150",
+                        typeColors.bg,
+                        typeColors.text
+                      )}
+                    >
+                      {type}
                     </td>
-                  ))}
-                  <td
-                    className={`px-2 py-1 ${
-                      teamTotals[type].weak > 0 ? "text-red-500 font-bold" : ""
-                    }`}
-                  >
-                    {teamTotals[type].weak || ""}
-                  </td>
-                  <td
-                    className={`px-2 py-1 ${
-                      teamTotals[type].resist > 0
-                        ? "text-green-500 font-bold"
-                        : ""
-                    }`}
-                  >
-                    {teamTotals[type].resist || ""}
-                  </td>
-                </tr>
-              ))}
+                    {team.map((_, idx) => (
+                      <td key={idx} className="px-2 py-1 dark:text-gray-200">
+                        <span
+                          className={getEffectivenessClass(
+                            pokemonEffectiveness[idx][type]
+                          )}
+                        >
+                          {formatEffectiveness(pokemonEffectiveness[idx][type])}
+                        </span>
+                      </td>
+                    ))}
+                    <td
+                      className={cn(
+                        "px-2 py-1",
+                        teamTotals[type].weak > 0
+                          ? "text-red-500 dark:text-red-400 font-bold"
+                          : "dark:text-gray-300"
+                      )}
+                    >
+                      {teamTotals[type].weak || ""}
+                    </td>
+                    <td
+                      className={cn(
+                        "px-2 py-1",
+                        teamTotals[type].resist > 0
+                          ? "text-green-500 dark:text-green-400 font-bold"
+                          : "dark:text-gray-300"
+                      )}
+                    >
+                      {teamTotals[type].resist || ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

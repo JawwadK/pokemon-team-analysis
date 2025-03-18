@@ -50,10 +50,10 @@ export const ThemeSwitcher = ({
         <Button
           variant="outline"
           size="sm"
-          className="flex gap-2 items-center bg-white/80 backdrop-blur-sm"
+          className="flex gap-2 items-center bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 dark:text-white dark:border-gray-700"
         >
-          <Palette className="h-4 w-4" />
-          <span>Theme</span>
+          <Palette className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+          <span className="text-gray-700 dark:text-gray-300">Theme</span>
           <Pokeball
             variant={themeToPokeball[currentTheme]}
             size="sm"
@@ -61,14 +61,19 @@ export const ThemeSwitcher = ({
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Select Theme</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent
+        align="end"
+        className="w-56 dark:bg-gray-800 dark:border-gray-700"
+      >
+        <DropdownMenuLabel className="dark:text-white">
+          Select Theme
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="dark:bg-gray-700" />
         {(Object.keys(APP_THEMES) as ThemeName[]).map((theme) => (
           <DropdownMenuItem
             key={theme}
-            className={`flex items-center gap-2 cursor-pointer ${
-              theme === currentTheme ? "bg-slate-100" : ""
+            className={`flex items-center gap-2 cursor-pointer dark:text-gray-200 dark:hover:bg-gray-700 ${
+              theme === currentTheme ? "bg-slate-100 dark:bg-gray-700" : ""
             }`}
             onClick={() => {
               onThemeChange(theme);

@@ -1,17 +1,20 @@
 // src/components/TypeBadge.tsx
 import { PokemonType } from "@/types/pokemon";
 import { TYPE_COLORS } from "@/utils/PokemonTheme";
+import { cn } from "@/lib/utils";
 
 interface TypeBadgeProps {
   type: PokemonType;
   size?: "sm" | "md" | "lg";
   className?: string;
+  onClick?: () => void;
 }
 
 export const TypeBadge = ({
   type,
   size = "md",
   className = "",
+  onClick,
 }: TypeBadgeProps) => {
   const typeData = TYPE_COLORS[type];
 
@@ -23,7 +26,17 @@ export const TypeBadge = ({
 
   return (
     <span
-      className={`inline-flex items-center ${typeData.bg} ${typeData.text} font-medium ${sizeClasses[size]} ${className} capitalize transition-transform hover:scale-105`}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center font-medium capitalize type-badge",
+        typeData.bg,
+        typeData.text,
+        sizeClasses[size],
+        "transition-all duration-300",
+        onClick ? "cursor-pointer hover:scale-110 active:scale-95" : "",
+        "shadow-sm dark:shadow-gray-900/20",
+        className
+      )}
     >
       {type}
     </span>
