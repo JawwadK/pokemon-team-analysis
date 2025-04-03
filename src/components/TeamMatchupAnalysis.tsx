@@ -1,11 +1,14 @@
 // src/components/TeamMatchupAnalysis.tsx
 import { useMemo, useState } from "react";
 import { Pokemon, PokemonType } from "@/types/pokemon";
-import { TYPE_CHART } from "@/data/typeChart";
+import {
+  DEFENSIVE_TYPE_CHART,
+  calculateDefensiveEffectiveness,
+  PokemonTypeWithFairy
+} from "@/data/defensiveTypeChart";
 import { TYPE_COLORS } from "@/utils/PokemonTheme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { TypeBadge } from "./TypeBadge";
 import { cn } from "@/lib/utils";
 import { 
@@ -43,22 +46,30 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
     >;
 
     // Initialize all types as not covered
-    Object.keys(TYPE_CHART).forEach((type) => {
+    Object.keys(DEFENSIVE_TYPE_CHART).forEach((type) => {
       coverage[type as PokemonType] = 0;
     });
 
-    // Count Pokémon that can hit each type super effectively
+    // For each Pokémon in the team
     team.forEach((pokemon) => {
-      pokemon.types.forEach((typeInfo) => {
-        const attackerType = typeInfo.type.name as PokemonType;
+      // Get the Pokémon's offensive types
+      const offensiveTypes = pokemon.types.map(
+        (t) => t.type.name as PokemonType
+      );
 
-        Object.entries(TYPE_CHART[attackerType] || {}).forEach(
-          ([defenderType, effectiveness]) => {
-            if (effectiveness > 1) {
-              coverage[defenderType as PokemonType]++;
-            }
+      // For each offensive type, check what it's super effective against
+      offensiveTypes.forEach((offensiveType) => {
+        // Look at all possible defensive types
+        Object.keys(DEFENSIVE_TYPE_CHART).forEach((defensiveType) => {
+          // Check if the defensive type takes super effective damage from this offensive type
+          const effectiveness =
+            DEFENSIVE_TYPE_CHART[defensiveType as PokemonTypeWithFairy]?.[
+              offensiveType as PokemonTypeWithFairy
+            ];
+          if (effectiveness && effectiveness > 1) {
+            coverage[defensiveType as PokemonType]++;
           }
-        );
+        });
       });
     });
 
@@ -66,81 +77,84 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
   }, [team]);
 
   // Calculate defensive coverage (which types your team resists)
-  const defensiveCoverage = useMemo(() => {
-    const coverage: Record<PokemonType, number> = {} as Record<
-      PokemonType,
-      number
-    >;
+const defensiveCoverage = useMemo(() => {
+  const coverage: Record<PokemonType, number> = {} as Record<
+    PokemonType,
+    number
+  >;
 
-    // Initialize all types
-    Object.keys(TYPE_CHART).forEach((type) => {
-      coverage[type as PokemonType] = 0;
+  // Initialize all types
+  Object.keys(DEFENSIVE_TYPE_CHART).forEach((type) => {
+    coverage[type as PokemonType] = 0;
+  });
+
+  // Count Pokémon that resist each type
+  team.forEach((pokemon) => {
+    const defensiveTypes = pokemon.types.map((t) => t.type.name);
+    const defenses = calculateDefensiveEffectiveness(defensiveTypes);
+
+    // For each attack type, check if this Pokémon resists it
+    Object.entries(defenses).forEach(([attackType, effectiveness]) => {
+      if (effectiveness < 1) {
+        coverage[attackType as PokemonType]++;
+      }
     });
+  });
 
-    // Count Pokémon that resist each type
-    team.forEach((pokemon) => {
-      const pokemonDefense = calculatePokemonDefense(pokemon);
-
-      Object.entries(pokemonDefense).forEach(([type, effectiveness]) => {
-        if (effectiveness < 1) {
-          coverage[type as PokemonType]++;
-        }
-      });
-    });
-
-    return coverage;
-  }, [team]);
+  return coverage;
+}, [team]);
 
   // Calculate common matchup effectiveness
-  const matchupAnalysis = useMemo(() => {
-    return COMMON_MATCHUPS.map((matchup) => {
-      // For each defensive type, calculate how your team fares
-      const teamEffectiveness = team.map((pokemon) => {
-        // Calculate the effectiveness of this matchup against your Pokémon
-        let totalEffectiveness = 1;
+const matchupAnalysis = useMemo(() => {
+  return COMMON_MATCHUPS.map((matchup) => {
+    // For each matchup, calculate how your team fares against these attacking types
+    const teamEffectiveness = team.map((pokemon) => {
+      const defensiveTypes = pokemon.types.map((t) => t.type.name);
 
-        matchup.types.forEach((attackType) => {
-          pokemon.types.forEach((defenderTypeInfo) => {
-            const defenderType = defenderTypeInfo.type.name as PokemonType;
-            const effectiveness =
-              TYPE_CHART[attackType as PokemonType]?.[defenderType] || 1;
-            totalEffectiveness *= effectiveness;
-          });
-        });
+      // Get the complete defensive effectiveness for this Pokémon
+      const defenses = calculateDefensiveEffectiveness(defensiveTypes);
 
-        return {
-          pokemon,
-          effectiveness: totalEffectiveness,
-        };
+      // Calculate the combined effectiveness of this matchup's attack types
+      // against this Pokémon's defensive typing
+      let totalEffectiveness = 1;
+      matchup.types.forEach((attackType) => {
+        // Multiply the effectiveness values for each attack type
+        totalEffectiveness *= defenses[attackType as PokemonType] || 1;
       });
 
-      // Count how many Pokémon are weak, neutral, or resistant
-      const weakCount = teamEffectiveness.filter(
-        (t) => t.effectiveness > 1
-      ).length;
-      const resistCount = teamEffectiveness.filter(
-        (t) => t.effectiveness < 1
-      ).length;
-      const immuneCount = teamEffectiveness.filter(
-        (t) => t.effectiveness === 0
-      ).length;
-
-      // Calculate an overall score (-10 to 10, negative means disadvantage)
-      const score = resistCount * 2 + immuneCount * 3 - weakCount * 2;
-
       return {
-        matchup,
-        teamEffectiveness,
-        stats: {
-          weakCount,
-          resistCount,
-          immuneCount,
-        },
-        score,
-        assessment: getAssessment(score),
+        pokemon,
+        effectiveness: totalEffectiveness,
       };
-    }).sort((a, b) => a.score - b.score); // Sort from worst to best matchups
-  }, [team]);
+    });
+
+    // Count how many Pokémon are weak, neutral, or resistant
+    const weakCount = teamEffectiveness.filter(
+      (t) => t.effectiveness > 1
+    ).length;
+    const resistCount = teamEffectiveness.filter(
+      (t) => t.effectiveness < 1 && t.effectiveness > 0
+    ).length;
+    const immuneCount = teamEffectiveness.filter(
+      (t) => t.effectiveness === 0
+    ).length;
+
+    // Calculate an overall score (-10 to 10, negative means disadvantage)
+    const score = resistCount * 2 + immuneCount * 3 - weakCount * 2;
+
+    return {
+      matchup,
+      teamEffectiveness,
+      stats: {
+        weakCount,
+        resistCount,
+        immuneCount,
+      },
+      score,
+      assessment: getAssessment(score),
+    };
+  }).sort((a, b) => a.score - b.score); // Sort from worst to best matchups
+}, [team]);
 
   // Get game-relevant type specialists
   const gameTypeSpecialists = useMemo(() => {
@@ -163,12 +177,15 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
 
         // Calculate how well your team handles this type
         const resistCount = team.filter((pokemon) => {
-          const defenses = calculatePokemonDefense(pokemon);
+          const defensiveTypes = pokemon.types.map((t) => t.type.name);
+          // Calculate effectiveness of this specialist type against the Pokémon
+          const defenses = calculateDefensiveEffectiveness(defensiveTypes);
           return defenses[specialistType] < 1;
         }).length;
 
         const weakCount = team.filter((pokemon) => {
-          const defenses = calculatePokemonDefense(pokemon);
+          const defensiveTypes = pokemon.types.map((t) => t.type.name);
+          const defenses = calculateDefensiveEffectiveness(defensiveTypes);
           return defenses[specialistType] > 1;
         }).length;
 
@@ -187,6 +204,7 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
       .sort((a, b) => a.score - b.score); // Sort from most difficult to easiest
   }, [selectedGame, team]);
 
+
   // Analyze matchups against notable trainers
   const trainerMatchups = useMemo(() => {
     // Filter trainers relevant to the selected game
@@ -201,28 +219,32 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
           // Find your best counters to this Pokémon
           const counters = team
             .map((yourPokemon) => {
-              // Calculate the effectiveness of your Pokémon's types against the trainer's Pokémon
-              let yourOffensiveEff = 1;
-              let theirOffensiveEff = 1;
+              // Calculate effectiveness of both sides' moves
+              const yourTypes = yourPokemon.types.map((t) => t.type.name);
+              const theirTypes = trainerPokemon.types;
 
-              // Your offensive effectiveness against their Pokémon
-              yourPokemon.types.forEach((yourType) => {
-                trainerPokemon.types.forEach((theirType) => {
-                  const eff =
-                    TYPE_CHART[yourType.type.name as PokemonType]?.[
-                      theirType as PokemonType
-                    ] || 1;
+              // Calculate your offensive effectiveness against their Pokémon
+              let yourOffensiveEff = 1;
+              yourTypes.forEach((yourType) => {
+                theirTypes.forEach((theirType) => {
+                  // How effective is your attack against their defense
+const eff =
+  DEFENSIVE_TYPE_CHART[theirType as PokemonTypeWithFairy]?.[
+    yourType as PokemonTypeWithFairy
+  ] || 1;
                   yourOffensiveEff *= eff;
                 });
               });
 
-              // Their offensive effectiveness against your Pokémon
-              trainerPokemon.types.forEach((theirType) => {
-                yourPokemon.types.forEach((yourType) => {
-                  const eff =
-                    TYPE_CHART[theirType as PokemonType]?.[
-                      yourType.type.name as PokemonType
-                    ] || 1;
+              // Calculate their offensive effectiveness against your Pokémon
+              let theirOffensiveEff = 1;
+              theirTypes.forEach((theirType) => {
+                yourTypes.forEach((yourType) => {
+                  // How effective is their attack against your defense
+const eff =
+  DEFENSIVE_TYPE_CHART[yourType as PokemonTypeWithFairy]?.[
+    theirType as PokemonTypeWithFairy
+  ] || 1;
                   theirOffensiveEff *= eff;
                 });
               });
@@ -264,27 +286,15 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
       })
       .sort((a, b) => a.score - b.score); // Sort from most difficult to easiest
   }, [team, selectedGame]);
+
   // Helper function to calculate type effectiveness for a Pokémon
   function calculatePokemonDefense(
     pokemon: Pokemon
   ): Record<PokemonType, number> {
-    const effectiveness: Record<PokemonType, number> = Object.keys(
-      TYPE_CHART
-    ).reduce(
-      (acc, type) => ({ ...acc, [type]: 1 }),
-      {} as Record<PokemonType, number>
-    );
-
-    pokemon.types.forEach((typeInfo) => {
-      const defenderType = typeInfo.type.name as PokemonType;
-      Object.entries(TYPE_CHART).forEach(([attackType, relations]) => {
-        const multiplier = relations[defenderType] || 1;
-        effectiveness[attackType as PokemonType] *= multiplier;
-      });
-    });
-
-    return effectiveness;
+    const defensiveTypes = pokemon.types.map((t) => t.type.name);
+    return calculateDefensiveEffectiveness(defensiveTypes);
   }
+
 
   // Helper function for assessment text
   function getAssessment(score: number): string {
@@ -327,29 +337,19 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
     }
   }
 
-  // Get best sprite for display
-  const getBestSprite = (pokemon: Pokemon) => {
-    // @ts-ignore
-    const officialArtwork =
-      pokemon.sprites?.other?.["official-artwork"]?.front_default;
-    // @ts-ignore
-    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
-    return officialArtwork || homeArtwork || pokemon.sprites.front_default;
-  };
-
   // Find offensive coverage gaps
   const offensiveGaps = useMemo(() => {
     return Object.entries(offensiveCoverage)
-      .filter(([_, count]) => count === 0)
+      .filter(([, count]) => count === 0)
       .map(([type]) => type as PokemonType);
   }, [offensiveCoverage]);
 
   // Find defensive coverage gaps
-  const defensiveGaps = useMemo(() => {
-    return Object.entries(defensiveCoverage)
-      .filter(([_, count]) => count === 0)
-      .map(([type]) => type as PokemonType);
-  }, [defensiveCoverage]);
+const defensiveGaps = useMemo(() => {
+  return Object.entries(defensiveCoverage)
+    .filter(([, count]) => count === 0)
+    .map(([type]) => type as PokemonType);
+}, [defensiveCoverage]);
 
   if (team.length === 0) {
     return null;
@@ -446,7 +446,7 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
                   <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-yellow-800 dark:text-yellow-300 text-sm">
                     <AlertTriangle size={14} className="inline mr-1" />
                     <span>
-                      Your team can't hit{" "}
+                      Your team can&apos;t hit{" "}
                       {offensiveGaps.map((type, i) => (
                         <span key={type} className="font-semibold capitalize">
                           {i > 0
@@ -519,7 +519,7 @@ export const TeamMatchupAnalysis = ({ team, selectedGame = "" }: TeamMatchupAnal
                   <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-yellow-800 dark:text-yellow-300 text-sm">
                     <AlertTriangle size={14} className="inline mr-1" />
                     <span>
-                      Your team doesn't resist{" "}
+                      Your team doesn&apos;t resist{" "}
                       {defensiveGaps.map((type, i) => (
                         <span key={type} className="font-semibold capitalize">
                           {i > 0

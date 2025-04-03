@@ -1,63 +1,111 @@
 // src/components/Confetti.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 
 interface ConfettiProps {
   active: boolean;
   duration?: number;
 }
 
+// Define a proper type for confetti pieces
+interface ConfettiPiece {
+  color: string;
+  dimensions: {
+    x: number;
+    y: number;
+  };
+  position: {
+    x: number;
+    y: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+  };
+  rotation: number;
+  rotationSpeed: number;
+  wave: {
+    amplitude: number;
+    frequency: number;
+    offset: number;
+  };
+}
+
 const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | null>(null);
-  const confettiPieces = useRef<any[]>([]);
+  const confettiPieces = useRef<ConfettiPiece[]>([]);
   const timeoutId = useRef<NodeJS.Timeout | null>(null);
 
-  const colors = [
-    "#FF5252", // Red
-    "#FF4081", // Pink
-    "#E040FB", // Purple
-    "#7C4DFF", // Deep Purple
-    "#536DFE", // Indigo
-    "#448AFF", // Blue
-    "#40C4FF", // Light Blue
-    "#18FFFF", // Cyan
-    "#64FFDA", // Teal
-    "#69F0AE", // Green
-    "#B2FF59", // Light Green
-    "#EEFF41", // Lime
-    "#FFFF00", // Yellow
-    "#FFD740", // Amber
-    "#FFAB40", // Orange
-    "#FF6E40", // Deep Orange
-  ];
+  const createConfettiPiece = useCallback(
+    (canvas: HTMLCanvasElement): ConfettiPiece => {
+      const colors = [
+        "#FF5252", // Red
+        "#FF4081", // Pink
+        "#E040FB", // Purple
+        "#7C4DFF", // Deep Purple
+        "#536DFE", // Indigo
+        "#448AFF", // Blue
+        "#40C4FF", // Light Blue
+        "#18FFFF", // Cyan
+        "#64FFDA", // Teal
+        "#69F0AE", // Green
+        "#B2FF59", // Light Green
+        "#EEFF41", // Lime
+        "#FFFF00", // Yellow
+        "#FFD740", // Amber
+        "#FFAB40", // Orange
+        "#FF6E40", // Deep Orange
+      ];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      return {
+        color,
+        dimensions: {
+          x: Math.random() * 10 + 5,
+          y: Math.random() * 10 + 5,
+        },
+        position: {
+          x: Math.random() * canvas.width,
+          y: -20 - Math.random() * 100,
+        },
+        velocity: {
+          x: (Math.random() - 0.5) * 10,
+          y: Math.random() * 5 + 3,
+        },
+        rotation: Math.random() * 2 * Math.PI,
+        rotationSpeed: Math.random() * 0.2 - 0.1,
+        wave: {
+          amplitude: Math.random() * 5 + 2,
+          frequency: Math.random() * 0.02 + 0.01,
+          offset: Math.random() * Math.PI * 2,
+        },
+      };
+    },
+    []
+  );
 
-  const createConfettiPiece = (canvas: HTMLCanvasElement) => {
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    return {
-      color,
-      dimensions: {
-        x: Math.random() * 10 + 5,
-        y: Math.random() * 10 + 5,
-      },
-      position: {
-        x: Math.random() * canvas.width,
-        y: -20 - Math.random() * 100,
-      },
-      velocity: {
-        x: (Math.random() - 0.5) * 10,
-        y: Math.random() * 5 + 3,
-      },
-      rotation: Math.random() * 2 * Math.PI,
-      rotationSpeed: Math.random() * 0.2 - 0.1,
-      wave: {
-        amplitude: Math.random() * 5 + 2,
-        frequency: Math.random() * 0.02 + 0.01,
-        offset: Math.random() * Math.PI * 2,
-      },
-    };
-  };
+  const stopAnimation = useCallback(() => {
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+      animationFrameId.current = null;
+    }
 
-  const startAnimation = () => {
+    if (timeoutId.current) {
+      clearTimeout(timeoutId.current);
+      timeoutId.current = null;
+    }
+
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.clearRect(
+        0,
+        0,
+        canvasRef.current?.width || 0,
+        canvasRef.current?.height || 0
+      );
+    }
+  }, []);
+
+  const startAnimation = useCallback(() => {
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
@@ -129,29 +177,7 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000 }) => {
         }
       }, duration);
     }
-  };
-
-  const stopAnimation = () => {
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
-      animationFrameId.current = null;
-    }
-
-    if (timeoutId.current) {
-      clearTimeout(timeoutId.current);
-      timeoutId.current = null;
-    }
-
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx) {
-      ctx.clearRect(
-        0,
-        0,
-        canvasRef.current?.width || 0,
-        canvasRef.current?.height || 0
-      );
-    }
-  };
+  }, [createConfettiPiece, duration]);
 
   useEffect(() => {
     if (active) {
@@ -164,7 +190,7 @@ const Confetti: React.FC<ConfettiProps> = ({ active, duration = 3000 }) => {
     return () => {
       stopAnimation();
     };
-  }, [active]);
+  }, [active, startAnimation, stopAnimation]);
 
   // Handle window resize
   useEffect(() => {

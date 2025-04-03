@@ -25,7 +25,11 @@ export const ThemeSwitcher = ({
   const [isOpen, setIsOpen] = useState(false);
 
   // Map themes to appropriate Pokeball variants
-  const themeToPokeball: Record<ThemeName, any> = {
+  // Map themes to appropriate Pokeball variants
+  const themeToPokeball: Record<
+    ThemeName,
+    "normal" | "great" | "ultra" | "master" | "premier"
+  > = {
     default: "normal",
     ruby: "normal",
     sapphire: "great",

@@ -13,8 +13,8 @@ import { APP_THEMES, ThemeName } from "@/utils/PokemonTheme";
 import { usePokemonData } from "@/hooks/usePokemonData";
 import { useTeam } from "@/hooks/useTeam";
 import { Card, CardContent } from "@/components/ui/card";
-
-import { ExternalLink, Loader2, Sparkles } from "lucide-react";
+import { Pokemon } from "@/types/pokemon";
+import { ExternalLink, Sparkles } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -41,13 +41,12 @@ export default function Home() {
     addPokemonToSlot,
     removePokemonFromSlot,
     getActiveTeam,
-    clearTeam,
   } = useTeam();
 
   const currentTheme = APP_THEMES[theme];
 
   // Enhanced add Pokemon function with animation and toast
-  const handleAddPokemon = (pokemon: any, slot: number) => {
+  const handleAddPokemon = (pokemon: Pokemon, slot: number) => {
     addPokemonToSlot(pokemon, slot);
 
     // Check if team is now complete (6 Pokémon)
@@ -93,16 +92,6 @@ export default function Home() {
         duration: 3000,
       }
     );
-  };
-
-  // Clear team with confirmation
-  const handleClearTeam = () => {
-    if (getActiveTeam().length > 0) {
-      clearTeam();
-      toast.info("Team cleared", {
-        description: "Your team has been reset.",
-      });
-    }
   };
 
   // Change theme based on game selection
@@ -349,7 +338,14 @@ export default function Home() {
                   <Tooltip key={variant}>
                     <TooltipTrigger>
                       <Pokeball
-                        variant={variant as any}
+                        variant={
+                          variant as
+                            | "normal"
+                            | "great"
+                            | "ultra"
+                            | "master"
+                            | "premier"
+                        }
                         size="md"
                         className={cn(
                           "transform hover:scale-125 transition-transform",

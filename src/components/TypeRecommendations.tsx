@@ -1,12 +1,15 @@
 // src/components/TypeRecommendations.tsx
 import { useState, useMemo } from "react";
 import { Pokemon, PokemonType } from "@/types/pokemon";
-import { TYPE_CHART } from "@/data/typeChart";
+import {
+  DEFENSIVE_TYPE_CHART,
+  calculateDefensiveEffectiveness,
+} from "@/data/defensiveTypeChart";
 import { GAME_DATA } from "@/data/games";
 import { TYPE_COLORS } from "@/utils/PokemonTheme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Info, Star, Shield, Zap } from "lucide-react";
+import { ChevronRight, Star, Shield, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TypeBadge } from "./TypeBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,27 +36,28 @@ export const TypeRecommendations = ({
     if (team.length === 0) return [];
 
     // Calculate the defensive coverage for the whole team
-    const typeWeaknesses: Record<PokemonType, number> = {};
+    const typeWeaknesses: Record<string, number> = {};
 
     // Initialize all types with 0 count
-    Object.keys(TYPE_CHART).forEach((type) => {
-      typeWeaknesses[type as PokemonType] = 0;
+    Object.keys(DEFENSIVE_TYPE_CHART).forEach((type) => {
+      typeWeaknesses[type] = 0;
     });
 
     // Count how many team members are weak to each type
     team.forEach((pokemon) => {
-      const pokemonDefense = calculatePokemonDefense(pokemon);
+      const defensiveTypes = pokemon.types.map((t) => t.type.name);
+      const pokemonDefense = calculateDefensiveEffectiveness(defensiveTypes);
 
       Object.entries(pokemonDefense).forEach(([type, effectiveness]) => {
         if (effectiveness > 1) {
-          typeWeaknesses[type as PokemonType]++;
+          typeWeaknesses[type]++;
         }
       });
     });
 
     // Sort types by weakness count (descending)
     return Object.entries(typeWeaknesses)
-      .filter(([_, count]) => count > 0)
+      .filter(([, count]) => count > 0)
       .sort((a, b) => b[1] - a[1])
       .map(([type, count]) => ({
         type: type as PokemonType,
@@ -75,10 +79,13 @@ export const TypeRecommendations = ({
     return availablePokemon
       .filter((pokemon) => !teamIds.has(pokemon.id))
       .map((pokemon) => {
-        const defenses = calculatePokemonDefense(pokemon);
+        const defensiveTypes = pokemon.types.map((t) => t.type.name);
+        const defenses = calculateDefensiveEffectiveness(defensiveTypes);
+
         const resistCount = topWeaknesses.filter(
-          (type) => defenses[type] < 1
+          (type) => defenses[type] < 1 && defenses[type] > 0
         ).length;
+
         const immuneCount = topWeaknesses.filter(
           (type) => defenses[type] === 0
         ).length;
@@ -240,37 +247,27 @@ export const TypeRecommendations = ({
     }
   }
 
-  // Helper function to calculate type effectiveness for a Pokémon
-  function calculatePokemonDefense(
-    pokemon: Pokemon
-  ): Record<PokemonType, number> {
-    const effectiveness: Record<PokemonType, number> = Object.keys(
-      TYPE_CHART
-    ).reduce(
-      (acc, type) => ({ ...acc, [type]: 1 }),
-      {} as Record<PokemonType, number>
-    );
-
-    pokemon.types.forEach((typeInfo) => {
-      const defenderType = typeInfo.type.name as PokemonType;
-      Object.entries(TYPE_CHART).forEach(([attackType, relations]) => {
-        const multiplier = relations[defenderType] || 1;
-        effectiveness[attackType as PokemonType] *= multiplier;
-      });
-    });
-
-    return effectiveness;
+  // Get best sprite for display
+const getBestSprite = (pokemon: Pokemon) => {
+  // Using a more specific type assertion instead of 'any'
+  interface ExtendedSprites {
+    front_default: string;
+    back_default: string;
+    other?: {
+      "official-artwork"?: {
+        front_default: string;
+      };
+      home?: {
+        front_default: string;
+      };
+    };
   }
 
-  // Get best sprite for display
-  const getBestSprite = (pokemon: Pokemon) => {
-    // @ts-ignore
-    const officialArtwork =
-      pokemon.sprites?.other?.["official-artwork"]?.front_default;
-    // @ts-ignore
-    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
-    return officialArtwork || homeArtwork || pokemon.sprites.front_default;
-  };
+  const sprites = pokemon.sprites as ExtendedSprites;
+  const officialArtwork = sprites?.other?.["official-artwork"]?.front_default;
+  const homeArtwork = sprites?.other?.home?.front_default;
+  return officialArtwork || homeArtwork || pokemon.sprites.front_default;
+};
 
   if (team.length === 0) {
     return null;
