@@ -52,14 +52,26 @@ export const TeamSlots = ({
   };
 
   // Get best sprite for display
-  const getBestSprite = (pokemon: Pokemon) => {
-    // @ts-ignore - These properties exist on the API response but might not be in your type definition
-    const officialArtwork =
-      pokemon.sprites?.other?.["official-artwork"]?.front_default;
-    // @ts-ignore
-    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
-    return officialArtwork || homeArtwork || pokemon.sprites.front_default;
-  };
+const getBestSprite = (pokemon: Pokemon) => {
+  // Using a more specific type assertion instead of 'any'
+  interface ExtendedSprites {
+    front_default: string;
+    back_default: string;
+    other?: {
+      "official-artwork"?: {
+        front_default: string;
+      };
+      home?: {
+        front_default: string;
+      };
+    };
+  }
+
+  const sprites = pokemon.sprites as ExtendedSprites;
+  const officialArtwork = sprites?.other?.["official-artwork"]?.front_default;
+  const homeArtwork = sprites?.other?.home?.front_default;
+  return officialArtwork || homeArtwork || pokemon.sprites.front_default;
+};
 
   return (
     <>

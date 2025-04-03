@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: "Pokémon Team Builder",
   description:
     "Build and analyze your perfect Pokémon team with animated interface",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

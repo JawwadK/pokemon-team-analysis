@@ -1,5 +1,4 @@
 // src/components/GameSelect.tsx
-import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,

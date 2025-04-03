@@ -1,10 +1,10 @@
 // src/data/typeSpecialists.ts
-import { PokemonType } from "@/types/pokemon";
 
 export interface TypeSpecialist {
   name: string;
   type: string;
   game?: string;
+  description?: string;
 }
 
 export interface TrainerData {
@@ -14,6 +14,7 @@ export interface TrainerData {
     name: string;
     types: string[];
   }[];
+  description?: string;
 }
 
 // Elite 4 and Gym Leader type specialists by generation

@@ -19,6 +19,14 @@ export interface Pokemon {
   sprites: {
     front_default: string;
     back_default: string;
+    other?: {
+      "official-artwork"?: {
+        front_default: string;
+      };
+      home?: {
+        front_default: string;
+      };
+    };
   };
 }
 

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pokemon } from "@/types/pokemon";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeBadge } from "./TypeBadge";
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 
 interface PokemonCardProps {
   pokemon: Pokemon;
@@ -33,11 +33,25 @@ export const PokemonCard = ({
 
   // Get best sprite for display
   const getBestSprite = () => {
-    // @ts-ignore - These properties exist on the API response but might not be in your type definition
-    const officialArtwork =
-      pokemon.sprites?.other?.["official-artwork"]?.front_default;
-    // @ts-ignore
-    const homeArtwork = pokemon.sprites?.other?.home?.front_default;
+    // Define a type for the extended sprites structure
+    type ExtendedSprites = Pokemon["sprites"] & {
+      other?: {
+        "official-artwork"?: {
+          front_default?: string;
+        };
+        home?: {
+          front_default?: string;
+        };
+      };
+    };
+
+    // Cast to the extended type
+    const sprites = pokemon.sprites as ExtendedSprites;
+
+    // Now we can safely access the properties
+    const officialArtwork = sprites?.other?.["official-artwork"]?.front_default;
+    const homeArtwork = sprites?.other?.home?.front_default;
+
     return officialArtwork || homeArtwork || pokemon.sprites.front_default;
   };
 

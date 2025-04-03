@@ -6,11 +6,6 @@ const createRange = (start: number, end: number): number[] => {
   return Array.from({ length: end - start + 1 }, (_, i) => i + start);
 };
 
-// Helper function to merge multiple arrays
-const mergeRanges = (...ranges: number[][]): number[] => {
-  return [...new Set(ranges.flat())].sort((a, b) => a - b);
-};
-
 export const GAME_DATA: Record<string, GameData> = {
   // Generation 1
   "Red/Blue/Yellow": {

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:svgjs="http://svgjs.dev/svgjs" width="32" height="32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Shadow effect -->
+  <filter id="SvgjsFilter1147" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"></feDropShadow>
+  </filter>
+
+  <!-- Glow effect -->
+  <filter id="SvgjsFilter1146" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="1" result="blur"></feGaussianBlur>
+    <feFlood flood-color="#4d9fff" flood-opacity="0.3" result="glow"></feFlood>
+    <feComposite in="glow" in2="blur" operator="in" result="softGlow"></feComposite>
+    <feComposite in="SourceGraphic" in2="softGlow" operator="over"></feComposite>
+  </filter>
+
+  <!-- Outline circle with shadow -->
+  <circle cx="16" cy="16" r="15" stroke="#333333" stroke-width="1" fill="none" filter="url(#shadow)"></circle>
+
+  <!-- Top half (red) -->
+  <path d="M1,16 A15,15 0 0,1 31,16 H1" fill="#EF4444" stroke-width="0"></path>
+
+  <!-- Bottom half (white) -->
+  <path d="M1,16 A15,15 0 0,0 31,16 H1" fill="white" stroke-width="0"></path>
+
+  <!-- Middle dividing line -->
+  <line x1="1" y1="16" x2="31" y2="16" stroke="black" stroke-width="1.5"></line>
+
+  <!-- Center circle (button) -->
+  <circle cx="16" cy="16" r="5" fill="white" stroke="#999" stroke-width="1.5"></circle>
+
+  <!-- Inner circle (button detail) -->
+  <circle cx="16" cy="16" r="2.5" fill="white" stroke="#999" stroke-width="0.75"></circle>
+
+  <!-- Shine effect -->
+  <path d="M22,10 A8,8 0 0,0 18,7 A8,8 0 0,0 22,10 Z" fill="white" fill-opacity="0.5" transform="rotate(15, 16, 16)"></path>
+</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>

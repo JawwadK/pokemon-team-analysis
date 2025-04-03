@@ -1,7 +1,6 @@
 // src/components/PokemonGrid.tsx
 import { Pokemon } from "@/types/pokemon";
 import { PokemonCard } from "./PokemonCard";
-import { cn } from "@/lib/utils";
 
 interface PokemonGridProps {
   pokemon: Pokemon[];
